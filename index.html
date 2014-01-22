@@ -1,4 +1,4 @@
-<!DOCTYPE HTML>
+<!--<!DOCTYPE HTML>
 <html>
   <head>
     <style>
@@ -20,4 +20,52 @@
       context.stroke();
     </script>
   </body>
+</html>-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
+        <script>
+
+            $(function(){
+
+                var point1 = new Array();
+                point1['x'] = false;
+                point1['y'] = false;
+                var point2 = new Array();
+                point2['x'] = false;
+                point2['y'] = false;
+
+                var c=document.getElementById("myCanvas");
+                var cxt=c.getContext("2d");
+
+                $(document).click(function(e){
+                    if ( false === point1['x'] || false === point1['y']) {
+                        point1['x'] = e.pageX;
+                        point1['y'] = e.pageY;
+                        return;
+                    }
+                    else if ( false === point2['x'] || false === point2['y'] ) {
+                        point2['x'] = e.pageX;
+                        point2['y'] = e.pageY;
+
+                        console.log("second");
+
+                        cxt.moveTo(point1['x'], point1['y']);
+                        cxt.lineTo(point2['x'], point2['y']);
+                        cxt.stroke();
+
+                    }
+
+
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <canvas id="myCanvas" width="200" height="200" style="border: 1px solid #000">Your browser does not support the canvas element.</canvas>
+    </body>
 </html>
