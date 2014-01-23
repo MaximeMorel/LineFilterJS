@@ -1,71 +1,176 @@
-<!--<!DOCTYPE HTML>
-<html>
-  <head>
-    <style>
-      body {
-        margin: 0px;
-        padding: 0px;
-      }
-    </style>
-  </head>
-  <body>
-    <canvas id="myCanvas" width="400" height="400"></canvas>
-    <script>
-      var canvas = document.getElementById('myCanvas');
-      var context = canvas.getContext('2d');
-
-      context.beginPath();
-      context.moveTo(100, 150);
-      context.lineTo(450, 50);
-      context.stroke();
-    </script>
-  </body>
-</html>-->
-
 <!DOCTYPE html>
 <html>
-    <head>
-        <title></title>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <script src="http://code.jquery.com/jquery-1.6.1.min.js"></script>
-        <script>
+<head>
+  <title>LineFilterJS</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <script>
 
-            $(function(){
-
-                var point1 = new Array();
-                point1['x'] = false;
-                point1['y'] = false;
-                var point2 = new Array();
-                point2['x'] = false;
-                point2['y'] = false;
-
-                var c=document.getElementById("myCanvas");
-                var cxt=c.getContext("2d");
-
-                $(document).click(function(e){
-                    if ( false === point1['x'] || false === point1['y']) {
-                        point1['x'] = e.pageX;
-                        point1['y'] = e.pageY;
-                        return;
-                    }
-                    else if ( false === point2['x'] || false === point2['y'] ) {
-                        point2['x'] = e.pageX;
-                        point2['y'] = e.pageY;
-
-                        console.log("second");
-
-                        cxt.moveTo(point1['x'], point1['y']);
-                        cxt.lineTo(point2['x'], point2['y']);
-                        cxt.stroke();
-
-                    }
+  var canvas;
+  var context;
+  var points;
+  var isMouseDown;
 
 
-                });
-            });
-        </script>
-    </head>
-    <body>
-        <canvas id="myCanvas" width="200" height="200" style="border: 1px solid #000">Your browser does not support the canvas element.</canvas>
-    </body>
+  function init() {
+    canvas = document.getElementById("myCanvas");
+    canvas.addEventListener("mousedown", mouseDown, false);
+    canvas.addEventListener("mouseup", mouseUp, false);
+    canvas.addEventListener("mousemove", addPoint, false);
+    context = canvas.getContext('2d');
+    points = new Array();
+    isMouseDown = false;
+  }
+
+  function reset() {
+    points = new Array();
+    blank();
+  }
+
+  function blank() {
+    canvas.width = canvas.width;
+  }
+
+  function Point(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  function mouseDown(event) {
+    isMouseDown = true;
+
+    addPoint(event);
+  }
+
+  function mouseUp(event) {
+    isMouseDown = false;
+  }
+
+  function addPoint(event) {
+    if(isMouseDown) {
+      //console.log("click : "+event.clientX+","+event.clientY);
+
+      var rect = canvas.getBoundingClientRect();
+      var p = new Point(event.clientX - rect.left, event.clientY - rect.top);
+
+      points.push(p);
+      context.fillRect(p.x, p.y, 1, 1);
+    }
+  }
+
+  function draw() {
+    context.beginPath();
+    context.moveTo(points[0].x, points[0].y);
+    for(var i=1; i<points.length; ++i) {
+      //console.log("point "+i+" : "+points[i].x+","+points[i].y);
+      context.lineTo(points[i].x, points[i].y);
+    }
+    context.stroke();
+  }
+
+  function drawFT() {
+
+    var pts = FT(points);
+    var res = FTinv(pts);
+
+    //console.log("FT - FTinv done ("+points.length+"->"+pts.length+"->"+res.length+")");
+
+    context.beginPath();
+    context.moveTo(res[0].x, res[0].y);
+    for(var i=1; i<res.length; ++i) {
+      //console.log("point "+i+" : "+res[i].x+","+res[i].y);
+      context.lineTo(res[i].x, res[i].y);
+    }
+    context.stroke();
+  }
+
+  function exp(p) {
+    return new Point(Math.exp(p.x)*Math.cos(p.y), Math.exp(p.x)*Math.sin(p.y));
+  }
+
+  function cpxMul(a, b) {
+    return new Point(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
+  }
+
+  function makeFilter(quality)
+  {
+    var filter = new Array();
+    var dist = quality*points.length/2;
+    for(var x=0; x<points.length; ++x)
+    {
+      var d = Math.sqrt((x-points.length/2)*(x-points.length/2));
+
+      if(d < dist)
+        filter[x] = 1.0;
+      else
+        filter[x] = 0.0;
+    }
+
+    return filter;
+  }
+
+  function FT(pts)
+  {
+    if(pts.length&1) pts.push(pts[pts.length-1]);
+    var N = pts.length;
+    var res = new Array();
+    //std::complex<double> cpx, p;
+    var start = -N/2;
+    var end = (N&1?(N/2)+1:N/2);
+    for(var m=start; m<end; ++m)
+    {
+      var cpx = new Point(0.0, 0.0);
+      for(var n=0; n<N; ++n)
+      {
+        var p = new Point(0.0, (-2.0*Math.PI*m*n)/N);
+        var tmp = cpxMul(pts[n], exp(p));
+        cpx.x += tmp.x;
+        cpx.y += tmp.y;
+      }
+      cpx.x /= N;
+      cpx.y /= N;
+      res[m+N/2] = cpx;
+    }
+
+    return res;
+  }
+
+  function FTinv(pts)
+  {
+    var quality = document.getElementById("quality").value/100;
+    //console.log(quality);
+    var filter = makeFilter(quality);
+    var N = pts.length;
+    var res = new Array();
+    //std::complex<double> cpx, p;
+    var start = -N/2;
+    var end = N/2;
+    if(N&1) ++end;
+    for(var n=0; n<N; ++n)
+    {
+      var cpx = new Point(0.0, 0.0);
+      for(var m=start; m<end; ++m)
+      {
+        var p = new Point(0.0, (-2.0*Math.PI*m*n)/N);
+        var tmp = cpxMul(pts[m+N/2], exp(p));
+          cpx.x += tmp.x*filter[m+N/2];
+          cpx.y += tmp.y*filter[m+N/2];
+      }
+      res[n] = cpx;
+    }
+
+    return res;
+  }
+  </script>
+</head>
+<body onload="init()">
+  <h1>Line filtering</h1>
+  <canvas id="myCanvas" width="600" height="400" style="border: 1px solid #000">Your browser does not support the canvas element.</canvas>
+  <br>
+  <button type="button" onclick="reset()">Reset</button>
+  <button type="button" onclick="blank()">Blank</button>
+  <button type="button" onclick="draw()">Draw</button>
+  <button type="button" onclick="drawFT()">Draw FT</button>
+  <span>Quality : </span><input id="quality" type="number" name="quality" min="0" max="100" value="10">
+  <p>Quality can go from 0 to 100.</p>
+</body>
 </html>
