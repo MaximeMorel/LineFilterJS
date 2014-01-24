@@ -8,6 +8,7 @@
   var canvas;
   var context;
   var points;
+  var currentPoints;
   var isMouseDown;
 
 
@@ -38,7 +39,10 @@
   function mouseDown(event) {
     isMouseDown = true;
 
-    addPoint(event);
+    //addPoint(event);
+
+    points.push(new Array());
+    currentPoints = points[points.length-1];
   }
 
   function mouseUp(event) {
@@ -52,35 +56,48 @@
       var rect = canvas.getBoundingClientRect();
       var p = new Point(event.clientX - rect.left, event.clientY - rect.top);
 
-      points.push(p);
+      currentPoints.push(p);
       context.fillRect(p.x, p.y, 1, 1);
     }
   }
 
-  function draw() {
-    context.beginPath();
-    context.moveTo(points[0].x, points[0].y);
-    for(var i=1; i<points.length; ++i) {
-      //console.log("point "+i+" : "+points[i].x+","+points[i].y);
-      context.lineTo(points[i].x, points[i].y);
+  function drawPts() {
+    for(var j=0; j<points.length; ++j) {
+      for(var i=0; i<points[j].length; ++i) {
+        context.fillRect(points[j][i].x, points[j][i].y, 1, 1);
+      }
     }
-    context.stroke();
+  }
+
+  function draw() {
+    for(var j=0; j<points.length; ++j) {
+      context.beginPath();
+      context.moveTo(points[j][0].x, points[j][0].y);
+      for(var i=1; i<points[j].length; ++i) {
+        //console.log("point "+i+" : "+points[i].x+","+points[i].y);
+        context.lineTo(points[j][i].x, points[j][i].y);
+      }
+      context.stroke();
+    }
   }
 
   function drawFT() {
+    for(var j=0; j<points.length; ++j) {
 
-    var pts = FT(points);
-    var res = FTinv(pts);
+      var pts = FT(points[j]);
+      var res = FTinv(pts);
 
-    //console.log("FT - FTinv done ("+points.length+"->"+pts.length+"->"+res.length+")");
+      console.log("FT - FTinv done ("+points[j].length+"->"+pts.length+"->"+res.length+")");
 
-    context.beginPath();
-    context.moveTo(res[0].x, res[0].y);
-    for(var i=1; i<res.length; ++i) {
-      //console.log("point "+i+" : "+res[i].x+","+res[i].y);
-      context.lineTo(res[i].x, res[i].y);
+      context.beginPath();
+      context.moveTo(res[0].x, res[0].y);
+      for(var i=1; i<res.length; ++i) {
+        //console.log("pts "+i+" : "+pts[i].x+","+pts[i].y);
+        //console.log("res "+i+" : "+res[i].x+","+res[i].y);
+        context.lineTo(res[i].x, res[i].y);
+      }
+      context.stroke();
     }
-    context.stroke();
   }
 
   function exp(p) {
@@ -91,18 +108,20 @@
     return new Point(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
   }
 
-  function makeFilter(quality)
+  function makeFilter(nb, quality)
   {
     var filter = new Array();
-    var dist = quality*points.length/2;
-    for(var x=0; x<points.length; ++x)
+    var dist = quality*nb/2;
+    for(var x=0; x<nb; ++x)
     {
-      var d = Math.sqrt((x-points.length/2)*(x-points.length/2));
+      var d = Math.sqrt((x-nb/2)*(x-nb/2));
 
       if(d < dist)
         filter[x] = 1.0;
       else
         filter[x] = 0.0;
+
+      //console.log("filter "+x+" : " + filter[x]);
     }
 
     return filter;
@@ -138,7 +157,7 @@
   {
     var quality = document.getElementById("quality").value/100;
     //console.log(quality);
-    var filter = makeFilter(quality);
+    var filter = makeFilter(pts.length, quality);
     var N = pts.length;
     var res = new Array();
     //std::complex<double> cpx, p;
@@ -168,6 +187,7 @@
   <br>
   <button type="button" onclick="reset()">Reset</button>
   <button type="button" onclick="blank()">Blank</button>
+  <button type="button" onclick="drawPts()">Draw points</button>
   <button type="button" onclick="draw()">Draw</button>
   <button type="button" onclick="drawFT()">Draw FT</button>
   <span>Quality : </span><input id="quality" type="number" name="quality" min="0" max="100" value="10">
