@@ -5,6 +5,48 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <script>
 
+  var Complex = (function() {
+    // ctor
+    function _Complex(a, b) {
+      this.a = a || 0.0;
+      this.b = b || 0.0;
+    };
+
+    _Complex.prototype.add = function(cpx) {
+      return new _Complex(this.a + cpx.a, this.b + cpx.b);
+    };
+
+    _Complex.prototype.sub = function(cpx) {
+      return new _Complex(this.a - cpx.a, this.b - cpx.b);
+    };
+
+    _Complex.prototype.sub = function() {
+      return new _Complex(-this.a, -this.b);
+    };
+
+    _Complex.prototype.mul = function(cpx) {
+      return new _Complex(this.a*cpx.a - this.b*cpx.b, this.a*cpx.b + this.b*cpx.a);
+    };
+
+    _Complex.prototype.mulF = function(factor) {
+      return new _Complex(this.a*factor, this.b*factor);
+    };
+
+    _Complex.prototype.divF = function(factor) {
+      return new _Complex(this.a/factor, this.b/factor);
+    };
+
+    _Complex.exp = function(cpx) {
+      return new _Complex(Math.exp(cpx.a)*Math.cos(cpx.b), Math.exp(cpx.a)*Math.sin(cpx.b));
+    };
+
+    _Complex.prototype.toString = function() {
+      return this.a + " + " + this.b + "i";
+    };
+
+    return _Complex;
+  }());
+
   var canvas;
   var context;
   var points;
@@ -20,21 +62,16 @@
     context = canvas.getContext('2d');
     points = new Array();
     isMouseDown = false;
-  }
+  };
 
   function reset() {
     points = new Array();
     blank();
-  }
+  };
 
   function blank() {
     canvas.width = canvas.width;
-  }
-
-  function Point(x, y) {
-    this.x = x;
-    this.y = y;
-  }
+  };
 
   function mouseDown(event) {
     isMouseDown = true;
@@ -43,70 +80,57 @@
 
     points.push(new Array());
     currentPoints = points[points.length-1];
-  }
+  };
 
   function mouseUp(event) {
     isMouseDown = false;
-  }
+
+    if(currentPoints.length == 0) {
+      points.pop();
+    }
+  };
 
   function addPoint(event) {
     if(isMouseDown) {
-      //console.log("click : "+event.clientX+","+event.clientY);
-
       var rect = canvas.getBoundingClientRect();
-      var p = new Point(event.clientX - rect.left, event.clientY - rect.top);
+      var p = new Complex(event.clientX - rect.left, event.clientY - rect.top);
 
       currentPoints.push(p);
-      context.fillRect(p.x, p.y, 1, 1);
+      context.fillRect(p.a, p.b, 1, 1);
     }
-  }
+  };
 
   function drawPts() {
     for(var j=0; j<points.length; ++j) {
       for(var i=0; i<points[j].length; ++i) {
-        context.fillRect(points[j][i].x, points[j][i].y, 1, 1);
+        context.fillRect(points[j][i].a, points[j][i].b, 1, 1);
       }
     }
-  }
+  };
 
   function draw() {
     for(var j=0; j<points.length; ++j) {
       context.beginPath();
-      context.moveTo(points[j][0].x, points[j][0].y);
+      context.moveTo(points[j][0].a, points[j][0].b);
       for(var i=1; i<points[j].length; ++i) {
-        //console.log("point "+i+" : "+points[i].x+","+points[i].y);
-        context.lineTo(points[j][i].x, points[j][i].y);
+        context.lineTo(points[j][i].a, points[j][i].b);
       }
       context.stroke();
     }
-  }
+  };
 
   function drawFT() {
     for(var j=0; j<points.length; ++j) {
-
       var pts = FT(points[j]);
       var res = FTinv(pts);
-
-      console.log("FT - FTinv done ("+points[j].length+"->"+pts.length+"->"+res.length+")");
-
       context.beginPath();
-      context.moveTo(res[0].x, res[0].y);
+      context.moveTo(res[0].a, res[0].b);
       for(var i=1; i<res.length; ++i) {
-        //console.log("pts "+i+" : "+pts[i].x+","+pts[i].y);
-        //console.log("res "+i+" : "+res[i].x+","+res[i].y);
-        context.lineTo(res[i].x, res[i].y);
+        context.lineTo(res[i].a, res[i].b);
       }
       context.stroke();
     }
-  }
-
-  function exp(p) {
-    return new Point(Math.exp(p.x)*Math.cos(p.y), Math.exp(p.x)*Math.sin(p.y));
-  }
-
-  function cpxMul(a, b) {
-    return new Point(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
-  }
+  };
 
   function makeFilter(nb, quality)
   {
@@ -120,65 +144,54 @@
         filter[x] = 1.0;
       else
         filter[x] = 0.0;
-
-      //console.log("filter "+x+" : " + filter[x]);
     }
 
     return filter;
-  }
+  };
 
   function FT(pts)
   {
     if(pts.length&1) pts.push(pts[pts.length-1]);
     var N = pts.length;
     var res = new Array();
-    //std::complex<double> cpx, p;
+    var cpx;
     var start = -N/2;
     var end = (N&1?(N/2)+1:N/2);
     for(var m=start; m<end; ++m)
     {
-      var cpx = new Point(0.0, 0.0);
+      cpx = new Complex(0.0, 0.0);
       for(var n=0; n<N; ++n)
       {
-        var p = new Point(0.0, (-2.0*Math.PI*m*n)/N);
-        var tmp = cpxMul(pts[n], exp(p));
-        cpx.x += tmp.x;
-        cpx.y += tmp.y;
+        cpx = cpx.add(pts[n].mul(Complex.exp(new Complex(0.0, (-2.0*Math.PI*m*n)/N))));
       }
-      cpx.x /= N;
-      cpx.y /= N;
-      res[m+N/2] = cpx;
+      res[m+N/2] = cpx.divF(N);
     }
 
     return res;
-  }
+  };
 
   function FTinv(pts)
   {
     var quality = document.getElementById("quality").value/100;
-    //console.log(quality);
     var filter = makeFilter(pts.length, quality);
     var N = pts.length;
     var res = new Array();
-    //std::complex<double> cpx, p;
+    var cpx;
     var start = -N/2;
     var end = N/2;
     if(N&1) ++end;
     for(var n=0; n<N; ++n)
     {
-      var cpx = new Point(0.0, 0.0);
+      cpx = new Complex(0.0, 0.0);
       for(var m=start; m<end; ++m)
       {
-        var p = new Point(0.0, (-2.0*Math.PI*m*n)/N);
-        var tmp = cpxMul(pts[m+N/2], exp(p));
-          cpx.x += tmp.x*filter[m+N/2];
-          cpx.y += tmp.y*filter[m+N/2];
+        cpx = cpx.add(pts[m+N/2].mulF(filter[m+N/2]).mul(Complex.exp(new Complex(0.0, (-2.0*Math.PI*m*n)/N))));
       }
       res[n] = cpx;
     }
 
     return res;
-  }
+  };
   </script>
 </head>
 <body onload="init()">
