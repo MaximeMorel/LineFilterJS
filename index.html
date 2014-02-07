@@ -115,6 +115,7 @@
       for(var i=1; i<points[j].length; ++i) {
         context.lineTo(points[j][i].a, points[j][i].b);
       }
+      context.lineTo(points[j][0].a, points[j][0].b);
       context.stroke();
     }
   };
@@ -196,6 +197,9 @@
 </head>
 <body onload="init()">
   <h1>Line filtering</h1>
+  <p>
+  Hold click and drag the mouse to draw a shape. Try to make a loop as the Fourier transform will assume that first and last points are connected.
+  </p>
   <canvas id="myCanvas" width="600" height="400" style="border: 1px solid #000">Your browser does not support the canvas element.</canvas>
   <br>
   <button type="button" onclick="reset()">Reset</button>
@@ -204,6 +208,15 @@
   <button type="button" onclick="draw()">Draw</button>
   <button type="button" onclick="drawFT()">Draw FT</button>
   <span>Quality : </span><input id="quality" type="number" name="quality" min="0" max="100" value="10">
-  <p>Quality can go from 0 to 100.</p>
+  <p>
+    <ul>
+      <li>Reset : delete all points and clear screen</li>
+      <li>Blank : clear screen</li>
+      <li>Draw points : redraw points</li>
+      <li>Draw : draw raw curve</li>
+      <li>Draw FT : draw filtered curve depending on quality</li>
+      <li>Quality can go from 0 (worse) to 100 (best).</li>
+    </ul>
+  </p>
 </body>
 </html>
